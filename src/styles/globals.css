@@ -3,10 +3,17 @@
 @tailwind utilities;
 
 @layer base {
-  @font-face {
-    font-family: "Pretendard";
-    src: url("/fonts/PretendardVariable.woff2");
-    font-display: swap;
+  :root {
+    --white: 255 255 255;
+    --black: 25 31 40;
+    --gray-100: 248 250 251;
+    --gray-200: 214 218 225;
+    --gray-300: 110 121 135;
+    --gray-400: 52 62 75;
+    --red: 239 83 80;
+    --green: 46 125 50;
+    --green-light: 232 245 233;
+    --primary: #eb5a2a;
   }
 
   html {
@@ -15,7 +22,18 @@
       "Noto Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji",
       "Segoe UI Symbol", "Noto Color Emoji";
   }
+
+  body {
+    @apply text-[14px] font-[500] text-black;
+  }
+
+  @font-face {
+    font-family: "Pretendard";
+    src: url("/fonts/PretendardVariable.woff2");
+    font-display: swap;
+  }
 }
+
 /* :root {
   --background: #ffffff;
   --foreground: #171717;
@@ -29,11 +47,12 @@
   }
 } */
 
-/* body {
-  color: var(--foreground);
-  background: var(--background);
+body {
+  /* color: var(--foreground); */
+  /* background: var(--background); */
+  background: #101212;
   font-family: "Pretendard", sans-serif;
-} */
+}
 
 @layer utilities {
   .text-balance {
