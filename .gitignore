@@ -1,1 +1,7 @@
 node_modules
+
+# Next 로컬 환경 설정 파일 (환경 변수 등)
+.next/*
+
+# test 페이지
+src/pages/test.tsx
