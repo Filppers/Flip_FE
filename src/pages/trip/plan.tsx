@@ -135,53 +135,53 @@ export default function Home() {
   }
 
   return (
-    <main className="flex justify-center w-[400px] min-h-[100vh]">
-      <div className="w-full flex flex-col p-[20px]">
-        {/* 뒤로가기 버튼 */}
-        <button
-          onClick={handleBack}
-          className={`self-start text-[24px] mb-[16px] ${
-            currentStep === 0
-              ? "text-[#D1D5DB] cursor-default"
-              : "text-[#374151]"
-          }`}
-          disabled={currentStep === 0}
-        >
-          &lt;
-        </button>
+    <main className="flex justify-center w-[400px] h-[100vh]">
+      <div className="w-full flex flex-col p-[20px] h-full">
+        {/* 헤더 영역 (고정) */}
+        <div className="flex-shrink-0">
+          <button
+            onClick={handleBack}
+            className={`self-start text-[24px] mb-[16px] ${
+              currentStep === 0
+                ? "text-[#D1D5DB] cursor-default"
+                : "text-[#374151]"
+            }`}
+            disabled={currentStep === 0}
+          >
+            &lt;
+          </button>
 
-        {/* 프로그레스 바 */}
-        <ProgressBar current={currentStep} total={TOTAL_STEPS} />
+          <ProgressBar current={currentStep} total={TOTAL_STEPS} />
 
-        {/* 질문 제목 */}
-        <div className="mt-[32px] mb-[8px]">
-          <h1 className="font-extrabold text-[26px] leading-[1.3]">
-            {currentStepKey === "여행_스타일" ? (
-              <>
-                {userName}님{stepInfo.title}
-                <br />
-                <span className="text-[#EB5A2A]">{stepInfo.highlight}</span>을
-                <br />
-                골라주세요
-              </>
-            ) : (
-              <>
-                {stepInfo.title}
-                <br />
-                <span className="text-[#EB5A2A]">{stepInfo.highlight}</span>
-                {currentStepKey === "여행지_입력"
-                  ? "를\n선택해주세요"
-                  : "을(를)\n선택해주세요"}
-              </>
-            )}
-          </h1>
-          <p className="text-[#EB5A2A] text-[14px] font-medium mt-[6px]">
-            중복 선택이 가능해요
-          </p>
+          <div className="mt-[32px] mb-[8px]">
+            <h1 className="font-extrabold text-[26px] leading-[1.3]">
+              {currentStepKey === "여행_스타일" ? (
+                <>
+                  {userName}님{stepInfo.title}
+                  <br />
+                  <span className="text-[#EB5A2A]">{stepInfo.highlight}</span>을
+                  <br />
+                  골라주세요
+                </>
+              ) : (
+                <>
+                  {stepInfo.title}
+                  <br />
+                  <span className="text-[#EB5A2A]">{stepInfo.highlight}</span>
+                  {currentStepKey === "여행지_입력"
+                    ? "를\n선택해주세요"
+                    : "을(를)\n선택해주세요"}
+                </>
+              )}
+            </h1>
+            <p className="text-[#EB5A2A] text-[14px] font-medium mt-[6px]">
+              중복 선택이 가능해요
+            </p>
+          </div>
         </div>
 
-        {/* 옵션 영역 */}
-        <div className="flex-1 overflow-y-auto mt-[24px] mb-[20px]">
+        {/* 옵션 영역 (내부 스크롤) */}
+        <div className="flex-1 overflow-y-auto mt-[24px] mb-[20px] min-h-0">
           {currentStepKey === "여행지_입력" ? (
             <DestinationSelect
               selected={selectedDestinations}
@@ -202,8 +202,8 @@ export default function Home() {
           )}
         </div>
 
-        {/* 하단 버튼 */}
-        <div className="flex gap-[12px] pb-[20px]">
+        {/* 하단 버튼 (고정) */}
+        <div className="flex-shrink-0 flex gap-[12px] pb-[20px]">
           <button
             onClick={handleSkip}
             className="flex-shrink-0 px-[24px] py-[14px] rounded-[16px] border-[1px] border-[#D1D5DB] text-[#6B7280] font-semibold text-[16px]"
