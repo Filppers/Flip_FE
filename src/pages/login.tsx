@@ -30,7 +30,7 @@ function Index() {
       });
     }
     toast.success("로그인에 성공하였습니다!");
-    router.push("/demo/chatgpt");
+    router.push("/trip/plan");
   };
 
   useEffect(() => {

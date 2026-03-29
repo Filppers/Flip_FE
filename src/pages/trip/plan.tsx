@@ -9,12 +9,13 @@ import {
 } from "@/constants";
 import ProgressBar from "@/components/ProgressBar";
 import FunnelOptionList from "@/components/FunnelOptionList";
+import DestinationSelect from "@/components/DestinationSelect";
 
 const TOTAL_STEPS = FUNNEL_STEP_KEYS.length;
 
 export default function Home() {
   const [gptResponseText, setGptResponseText] = useState("");
-  const [country, setCountry] = useState("");
+  const [selectedDestinations, setSelectedDestinations] = useState<string[]>([]);
   const [userName, setUserName] = useState("");
   const [isGPTLoading, setIsGPTLoading] = useState(false);
   const [currentStep, setCurrentStep] = useState(0);
@@ -47,7 +48,7 @@ export default function Home() {
       );
 
     const userOptionSelectionString =
-      `여행지: ${country} \n` + userOptionSelection.join("\n");
+      `여행지: ${selectedDestinations.join(", ")} \n` + userOptionSelection.join("\n");
 
     setIsGPTLoading(true);
 
@@ -169,7 +170,7 @@ export default function Home() {
                 <br />
                 <span className="text-[#EB5A2A]">{stepInfo.highlight}</span>
                 {currentStepKey === "여행지_입력"
-                  ? "를\n입력해주세요"
+                  ? "를\n선택해주세요"
                   : "을(를)\n선택해주세요"}
               </>
             )}
@@ -182,12 +183,15 @@ export default function Home() {
         {/* 옵션 영역 */}
         <div className="flex-1 overflow-y-auto mt-[24px] mb-[20px]">
           {currentStepKey === "여행지_입력" ? (
-            <input
-              title="여행지 입력"
-              placeholder="예: 일본, 파리, 방콕..."
-              className="w-full bg-[#ff6f3f28] p-[14px] rounded-[16px] text-center text-[#ed521e] border-[1px] border-[#ed521e] text-[16px] font-semibold placeholder:text-[#ed521e80]"
-              value={country}
-              onChange={(e) => setCountry(e.target.value)}
+            <DestinationSelect
+              selected={selectedDestinations}
+              onToggle={(dest) =>
+                setSelectedDestinations((prev) =>
+                  prev.includes(dest)
+                    ? prev.filter((d) => d !== dest)
+                    : [...prev, dest]
+                )
+              }
             />
           ) : (
             <FunnelOptionList

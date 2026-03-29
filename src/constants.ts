@@ -1,3 +1,63 @@
+export const FUNNEL_STEP_KEYS = [
+  "여행지_입력",
+  "여행할_달",
+  "여행_기간",
+  "여행_동반자",
+  "여행_인원_연령대",
+  "예산_범위",
+  "여행_스타일",
+  "여행의_목적",
+  "음식_취향",
+  "선호하는_여행_시간대",
+  "쇼핑_시간",
+  "관광지_밀집도",
+  "여행_템포",
+] as const;
+
+export type FunnelStepKey = (typeof FUNNEL_STEP_KEYS)[number];
+
+export const STEP_TITLES: Record<
+  FunnelStepKey,
+  { title: string; highlight: string }
+> = {
+  여행지_입력: { title: "떠나고싶은 ", highlight: "여행지" },
+  여행할_달: { title: "여행하고 싶은 ", highlight: "달" },
+  여행_기간: { title: "원하는 ", highlight: "여행 기간" },
+  여행_동반자: { title: "함께 떠날 ", highlight: "여행 동반자" },
+  여행_인원_연령대: { title: "여행 인원의 ", highlight: "연령대" },
+  예산_범위: { title: "여행의 ", highlight: "예산 범위" },
+  여행_스타일: { title: "의 ", highlight: "여행 스타일" },
+  여행의_목적: { title: "이번 여행의 ", highlight: "목적" },
+  음식_취향: { title: "선호하는 ", highlight: "음식 취향" },
+  선호하는_여행_시간대: { title: "선호하는 ", highlight: "여행 시간대" },
+  쇼핑_시간: { title: "원하는 ", highlight: "쇼핑 시간" },
+  관광지_밀집도: { title: "선호하는 ", highlight: "관광지 밀집도" },
+  여행_템포: { title: "원하는 ", highlight: "여행 템포" },
+};
+
+export const 여행지_목록: { region: string; destinations: string[] }[] = [
+  {
+    region: "동아시아",
+    destinations: ["대한민국", "일본", "홍콩", "상하이", "마카오", "타이베이"],
+  },
+  {
+    region: "동남아시아",
+    destinations: ["나트랑", "다낭", "세부", "마닐라", "방콕", "발리", "싱가포르", "푸켓", "하노이"],
+  },
+  {
+    region: "미주",
+    destinations: ["LA", "뉴욕", "하와이", "밴쿠버", "샌프란시스코", "칸쿤"],
+  },
+  {
+    region: "유럽",
+    destinations: ["파리", "런던", "로마", "바르셀로나", "프라하", "스위스", "산토리니", "이스탄불"],
+  },
+  {
+    region: "오세아니아",
+    destinations: ["시드니", "멜버른", "괌", "사이판", "뉴질랜드"],
+  },
+];
+
 export const 사용자_취향_입력 = {
   여행할_달: ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12"],
   여행_기간: [
