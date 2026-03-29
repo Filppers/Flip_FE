@@ -69,7 +69,7 @@ export default function Home() {
     // loading 처리
     setIsGPTLoading(true);
 
-    const res = await axios.post("http://localhost:8080/chat", {
+    const res = await axios.post("/api/chat", {
       prompt: userOptionSelectionString,
     });
 

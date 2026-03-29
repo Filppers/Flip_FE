@@ -2,7 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { useEffect } from "react";
-import { instance } from "@/api/config";
+import axios from "axios";
 import toast from "react-hot-toast";
 import Cookies from "js-cookie";
 import Logo from "/public/images/logo.png";
@@ -34,8 +34,8 @@ function OAuthCallback() {
   const { provider, code } = router.query;
 
   const reqSocialLogin = async () => {
-    const res = await instance.get(
-      `/oauth/callback?provider=${provider}&code=${code}`
+    const res = await axios.get(
+      `/api/oauth/callback?provider=${provider}&code=${code}`
     );
 
     console.log("소셜로그인을 통해 서버에서 얻은 유저 데이터");

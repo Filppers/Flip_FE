@@ -2,7 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { useEffect } from "react";
-import { instance } from "@/api/config";
+import axios from "axios";
 import toast from "react-hot-toast";
 import Cookies from "js-cookie";
 import { IconGoogle, IconNaver } from "../../public/icons";
@@ -16,7 +16,7 @@ function Index() {
   const { code } = router.query; // id params : 수정할 건물 id
 
   const reqSocialLogin = async () => {
-    const res = await instance.post("/code", {
+    const res = await axios.post("/api/oauth/callback", {
       code,
     });
 
