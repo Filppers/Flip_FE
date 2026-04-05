@@ -10,6 +10,7 @@ import {
 import ProgressBar from "@/components/ProgressBar";
 import FunnelOptionList from "@/components/FunnelOptionList";
 import DestinationSelect from "@/components/DestinationSelect";
+import BudgetInput from "@/components/BudgetInput";
 
 const TOTAL_STEPS = FUNNEL_STEP_KEYS.length;
 
@@ -19,6 +20,7 @@ export default function Home() {
   const [userName, setUserName] = useState("");
   const [isGPTLoading, setIsGPTLoading] = useState(false);
   const [currentStep, setCurrentStep] = useState(0);
+  const [budget, setBudget] = useState(50); // 50만원 (기본값)
 
   const [userOptions, setUserOptions] = useState<
     Record<string, string[]>
@@ -29,7 +31,6 @@ export default function Home() {
     여행_스타일: [],
     여행_동반자: [],
     음식_취향: [],
-    예산_범위: [],
     여행의_목적: [],
     선호하는_여행_시간대: [],
     활동_강도: [],
@@ -48,6 +49,7 @@ export default function Home() {
       );
 
     const userOptionSelectionString =
+      `예산: ${budget}만원\n` +
       `여행지: ${selectedDestinations.join(", ")} \n` + userOptionSelection.join("\n");
 
     setIsGPTLoading(true);
@@ -155,7 +157,15 @@ export default function Home() {
 
           <div className="mt-[32px] mb-[8px]">
             <h1 className="font-extrabold text-[26px] leading-[1.3]">
-              {currentStepKey === "여행_스타일" ? (
+              {currentStepKey === "예산_범위" ? (
+                <>
+                  {stepInfo.title}
+                  <br />
+                  <span className="text-[#EB5A2A]">{stepInfo.highlight}</span>을
+                  <br />
+                  설정해주세요
+                </>
+              ) : currentStepKey === "여행_스타일" ? (
                 <>
                   {userName}님{stepInfo.title}
                   <br />
@@ -174,15 +184,19 @@ export default function Home() {
                 </>
               )}
             </h1>
-            <p className="text-[#EB5A2A] text-[14px] font-medium mt-[6px]">
-              중복 선택이 가능해요
-            </p>
+            {currentStepKey !== "예산_범위" && (
+              <p className="text-[#EB5A2A] text-[14px] font-medium mt-[6px]">
+                중복 선택이 가능해요
+              </p>
+            )}
           </div>
         </div>
 
         {/* 옵션 영역 (내부 스크롤) */}
         <div className="flex-1 overflow-y-auto mt-[24px] mb-[20px] min-h-0">
-          {currentStepKey === "여행지_입력" ? (
+          {currentStepKey === "예산_범위" ? (
+            <BudgetInput budget={budget} onChange={setBudget} />
+          ) : currentStepKey === "여행지_입력" ? (
             <DestinationSelect
               selected={selectedDestinations}
               onToggle={(dest) =>
