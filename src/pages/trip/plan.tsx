@@ -14,13 +14,18 @@ import BudgetInput from "@/components/BudgetInput";
 
 const TOTAL_STEPS = FUNNEL_STEP_KEYS.length;
 
+type Phase = "funnel" | "loading-themes" | "select-theme" | "loading-plan" | "result";
+
 export default function Home() {
-  const [gptResponseText, setGptResponseText] = useState("");
+  const [phase, setPhase] = useState<Phase>("funnel");
+  const [themes, setThemes] = useState<string[]>([]);
+  const [selectedTheme, setSelectedTheme] = useState<string | null>(null);
+  const [gptPlan, setGptPlan] = useState("");
   const [selectedDestinations, setSelectedDestinations] = useState<string[]>([]);
   const [userName, setUserName] = useState("");
-  const [isGPTLoading, setIsGPTLoading] = useState(false);
   const [currentStep, setCurrentStep] = useState(0);
   const [budget, setBudget] = useState(50); // 50만원 (기본값)
+  const [userPreferenceString, setUserPreferenceString] = useState("");
 
   const [userOptions, setUserOptions] = useState<
     Record<string, string[]>
@@ -39,7 +44,7 @@ export default function Home() {
     여행_템포: [],
   });
 
-  const createGPTResponse = async () => {
+  const buildPreferenceString = () => {
     const userOptionSelection = Object.keys(사용자_취향_입력)
       .filter(
         (key) => userOptions[key as keyof typeof 사용자_취향_입력]?.length > 0
@@ -48,18 +53,56 @@ export default function Home() {
         (key) => key + " : " + userOptions[key as keyof typeof 사용자_취향_입력]
       );
 
-    const userOptionSelectionString =
+    return (
       `예산: ${budget}만원\n` +
-      `여행지: ${selectedDestinations.join(", ")} \n` + userOptionSelection.join("\n");
+      `여행지: ${selectedDestinations.join(", ")}\n` +
+      userOptionSelection.join("\n")
+    );
+  };
 
-    setIsGPTLoading(true);
+  // 1차: 여행 테마 3개 추천 (step: "summary")
+  const fetchThemes = async () => {
+    const prefString = buildPreferenceString();
+    setUserPreferenceString(prefString);
+    setPhase("loading-themes");
 
     const res = await axios.post("/api/chat", {
-      prompt: userOptionSelectionString,
+      step: "summary",
+      prompt: prefString,
     });
 
-    if (res.data.response) setIsGPTLoading(false);
-    setGptResponseText(res.data.response);
+    try {
+      const raw = res.data.response.replace(/```json\n?|```/g, "").trim();
+      const parsed = JSON.parse(raw);
+      const summaries: string[] = parsed.trip_summary || [];
+      setThemes(summaries.map((s) => s));
+    } catch {
+      setThemes([res.data.response]);
+    }
+    setPhase("select-theme");
+  };
+
+  // 2차: 선택한 테마로 상세 여행 계획 생성 (step: "details")
+  const fetchPlan = async (theme: string) => {
+    setSelectedTheme(theme);
+    setPhase("loading-plan");
+
+    const step2Input = JSON.stringify({
+      선택한_계획: theme,
+      여행지: selectedDestinations.join(", "),
+      예산: `${budget}만원`,
+      ...Object.fromEntries(
+        Object.entries(userOptions).filter(([, v]) => v.length > 0).map(([k, v]) => [k, v.join(", ")])
+      ),
+    });
+
+    const res = await axios.post("/api/chat", {
+      step: "details",
+      prompt: step2Input,
+    });
+
+    setGptPlan(res.data.response);
+    setPhase("result");
   };
 
   useEffect(() => {
@@ -67,15 +110,11 @@ export default function Home() {
     user_name ? setUserName(user_name) : setUserName("00");
   }, []);
 
-  useEffect(() => {
-    if (!gptResponseText) setIsGPTLoading(false);
-  }, [gptResponseText]);
-
   const handleNext = () => {
     if (currentStep < TOTAL_STEPS - 1) {
       setCurrentStep((prev) => prev + 1);
     } else {
-      createGPTResponse();
+      fetchThemes();
     }
   };
 
@@ -83,7 +122,7 @@ export default function Home() {
     if (currentStep < TOTAL_STEPS - 1) {
       setCurrentStep((prev) => prev + 1);
     } else {
-      createGPTResponse();
+      fetchThemes();
     }
   };
 
@@ -105,15 +144,15 @@ export default function Home() {
   const currentStepKey = FUNNEL_STEP_KEYS[currentStep];
   const stepInfo = STEP_TITLES[currentStepKey];
 
-  if (isGPTLoading) {
+  // 1차 로딩: 테마 추천 중
+  if (phase === "loading-themes") {
     return (
       <div className="w-[400px] h-[100vh] flex flex-col justify-center items-center gap-[20px]">
         <IconSpinner />
         <p className="font-extrabold text-[22px] text-center mt-[20px]">
-          <span className="text-primary">플립 AI</span>가 {userName}님의 맞춤형
-          여행 계획을
+          <span className="text-primary">플립 AI</span>가 {userName}님에게 맞는
           <br />
-          생성하고 있어요
+          여행 테마를 추천하고 있어요
         </p>
         <p className="font-semibold text-[#7c7c7c]">
           * 최대 2-3분 소요될 수 있어요 (평균 10초 내외 소요)
@@ -122,7 +161,70 @@ export default function Home() {
     );
   }
 
-  if (gptResponseText) {
+  // 테마 선택 화면
+  if (phase === "select-theme") {
+    return (
+      <main className="flex justify-center w-[400px] h-[100vh]">
+        <div className="w-full flex flex-col p-[20px] h-full">
+          <div className="flex-shrink-0">
+            <div className="mt-[32px] mb-[8px]">
+              <h1 className="font-extrabold text-[26px] leading-[1.3]">
+                {userName}님을 위한
+                <br />
+                <span className="text-[#EB5A2A]">여행 테마</span>를
+                <br />
+                골라주세요
+              </h1>
+              <p className="text-[#9CA3AF] text-[14px] font-medium mt-[6px]">
+                선택한 테마로 상세 일정을 만들어 드릴게요
+              </p>
+            </div>
+          </div>
+
+          <div className="flex-1 overflow-y-auto mt-[24px] mb-[20px] min-h-0">
+            <div className="flex flex-col gap-[12px]">
+              {themes.map((theme, idx) => (
+                <button
+                  key={idx}
+                  onClick={() => fetchPlan(theme)}
+                  className="w-full text-left p-[20px] rounded-[16px] bg-[#F3F4F6] hover:bg-[#ff6f3f28] hover:border-[#EB5A2A] border-[2px] border-transparent transition-all duration-200"
+                >
+                  <p className="font-bold text-[17px] text-[#374151] leading-[1.5]">
+                    {theme}
+                  </p>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      </main>
+    );
+  }
+
+  // 2차 로딩: 상세 일정 생성 중
+  if (phase === "loading-plan") {
+    return (
+      <div className="w-[400px] h-[100vh] flex flex-col justify-center items-center gap-[20px]">
+        <IconSpinner />
+        <p className="font-extrabold text-[22px] text-center mt-[20px]">
+          <span className="text-primary">플립 AI</span>가 {userName}님의 맞춤형
+          <br />
+          여행 계획을 생성하고 있어요
+        </p>
+        {selectedTheme && (
+          <p className="text-[#EB5A2A] font-semibold text-[16px]">
+            &ldquo;{selectedTheme}&rdquo; 테마
+          </p>
+        )}
+        <p className="font-semibold text-[#7c7c7c]">
+          * 최대 2-3분 소요될 수 있어요 (평균 10초 내외 소요)
+        </p>
+      </div>
+    );
+  }
+
+  // 최종 결과 화면
+  if (phase === "result") {
     return (
       <main className="flex justify-center w-[400px] p-[20px]">
         <section className="flex flex-col p-[10px] gap-[20px]">
@@ -130,12 +232,18 @@ export default function Home() {
             <span className="text-[#eb5a2a] underline">{userName}님</span> 취향
             맞춤 <p className="underline">AI 여행계획 생성 결과 (JSON)</p>
           </h5>
-          <p className="h-[700px] overflow-y-auto">{gptResponseText}</p>
+          {selectedTheme && (
+            <p className="text-[#EB5A2A] font-semibold text-[16px]">
+              선택 테마: {selectedTheme}
+            </p>
+          )}
+          <p className="h-[700px] overflow-y-auto">{gptPlan}</p>
         </section>
       </main>
     );
   }
 
+  // 퍼널 화면
   return (
     <main className="flex justify-center w-[400px] h-[100vh]">
       <div className="w-full flex flex-col p-[20px] h-full">
