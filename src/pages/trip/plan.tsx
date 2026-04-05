@@ -1,5 +1,5 @@
 import axios from "axios";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Cookies from "js-cookie";
 import { IconSpinner } from "../../../public/icons";
 import {
@@ -11,6 +11,7 @@ import ProgressBar from "@/components/ProgressBar";
 import FunnelOptionList from "@/components/FunnelOptionList";
 import DestinationSelect from "@/components/DestinationSelect";
 import BudgetInput from "@/components/BudgetInput";
+import TripRouteMap from "@/components/TripRouteMap";
 
 const TOTAL_STEPS = FUNNEL_STEP_KEYS.length;
 
@@ -144,6 +145,70 @@ export default function Home() {
   const currentStepKey = FUNNEL_STEP_KEYS[currentStep];
   const stepInfo = STEP_TITLES[currentStepKey];
 
+  // GPT 응답에서 좌표 파싱 (hook은 early return 전에 호출)
+  const parsedCoordinates = useMemo(() => {
+    if (!gptPlan) return [];
+    const coords: { lat: number; lng: number; label: string; day: number }[] = [];
+
+    // JSON 파싱 시도
+    try {
+      // GPT 응답에서 JSON 부분만 추출
+      const jsonMatch = gptPlan.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        const parsed = JSON.parse(jsonMatch[0]);
+
+        // 여러 가능한 키 대응
+        const planList =
+          parsed.trip_plan ||
+          parsed.tripPlanList ||
+          parsed.data?.tripPlanList ||
+          parsed.data?.trip_plan ||
+          [];
+
+        planList.forEach((dayItem: any) => {
+          const day = dayItem.day || 1;
+          const contents = dayItem.contents || [];
+          contents.forEach((item: any) => {
+            const coordStr = item.place?.coordinate || item.coordinate;
+            if (!coordStr) return;
+            const parts = String(coordStr).split(",").map((s: string) => parseFloat(s.trim()));
+            if (parts.length >= 2 && !isNaN(parts[0]) && !isNaN(parts[1])) {
+              coords.push({
+                lat: parts[0],
+                lng: parts[1],
+                label: `Day${day} ${item.content || ""}`,
+                day,
+              });
+            }
+          });
+        });
+      }
+    } catch (e) {
+      console.error("JSON 파싱 실패, 정규식 fallback 시도:", e);
+    }
+
+    // JSON 파싱 실패 시 정규식으로 coordinate 값 직접 추출
+    if (coords.length === 0) {
+      const regex = /"coordinate"\s*:\s*"([^"]+)"/g;
+      let match;
+      let idx = 1;
+      while ((match = regex.exec(gptPlan)) !== null) {
+        const parts = match[1].split(",").map((s) => parseFloat(s.trim()));
+        if (parts.length >= 2 && !isNaN(parts[0]) && !isNaN(parts[1])) {
+          coords.push({
+            lat: parts[0],
+            lng: parts[1],
+            label: `장소 ${idx}`,
+            day: 1,
+          });
+          idx++;
+        }
+      }
+    }
+
+    return coords;
+  }, [gptPlan]);
+
   // 1차 로딩: 테마 추천 중
   if (phase === "loading-themes") {
     return (
@@ -226,19 +291,30 @@ export default function Home() {
   // 최종 결과 화면
   if (phase === "result") {
     return (
-      <main className="flex justify-center w-[400px] p-[20px]">
-        <section className="flex flex-col p-[10px] gap-[20px]">
-          <h5 className="font-bold text-[25px]">
-            <span className="text-[#eb5a2a] underline">{userName}님</span> 취향
-            맞춤 <p className="underline">AI 여행계획 생성 결과 (JSON)</p>
-          </h5>
-          {selectedTheme && (
-            <p className="text-[#EB5A2A] font-semibold text-[16px]">
-              선택 테마: {selectedTheme}
-            </p>
-          )}
-          <p className="h-[700px] overflow-y-auto">{gptPlan}</p>
-        </section>
+      <main className="flex justify-center w-[400px] h-[100vh]">
+        <div className="w-full flex flex-col h-full">
+          {/* 상단: 지도 (50%) */}
+          <div className="h-[50vh] w-full relative">
+            <TripRouteMap coordinates={parsedCoordinates} />
+            {selectedTheme && (
+              <div className="absolute top-[12px] left-[12px] right-[12px] bg-white/90 backdrop-blur-sm rounded-[12px] px-[14px] py-[10px] shadow-md">
+                <p className="text-[#EB5A2A] font-bold text-[14px] truncate">
+                  {selectedTheme}
+                </p>
+              </div>
+            )}
+          </div>
+
+          {/* 하단: 여행 계획 JSON (50%) */}
+          <div className="h-[50vh] w-full overflow-y-auto bg-white p-[16px]">
+            <h5 className="font-bold text-[20px] mb-[12px]">
+              <span className="text-[#eb5a2a]">{userName}님</span> 맞춤 여행계획
+            </h5>
+            <pre className="text-[13px] bg-[#F9FAFB] rounded-[12px] p-[14px] whitespace-pre-wrap break-words leading-[1.6]">
+              {gptPlan}
+            </pre>
+          </div>
+        </div>
       </main>
     );
   }
