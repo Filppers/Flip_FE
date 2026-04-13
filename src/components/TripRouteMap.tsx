@@ -66,7 +66,7 @@ const TripRouteMap = ({ coordinates }: TripRouteMapProps) => {
         streetViewControl: false,
       }}
     >
-      {coordinates.map((coord, idx) => (
+      {/* {coordinates.map((coord, idx) => (
         <MarkerF
           key={idx}
           position={{ lat: coord.lat, lng: coord.lng }}
@@ -78,7 +78,7 @@ const TripRouteMap = ({ coordinates }: TripRouteMapProps) => {
           }}
           title={coord.label}
         />
-      ))}
+      ))} */}
     </GoogleMap>
   );
 };
