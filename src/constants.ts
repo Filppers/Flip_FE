@@ -12,6 +12,7 @@ export const FUNNEL_STEP_KEYS = [
   "쇼핑_시간",
   "관광지_밀집도",
   "여행_템포",
+  "추가_요청사항",
 ] as const;
 
 export type FunnelStepKey = (typeof FUNNEL_STEP_KEYS)[number];
@@ -33,6 +34,7 @@ export const STEP_TITLES: Record<
   쇼핑_시간: { title: "원하는 ", highlight: "쇼핑 시간" },
   관광지_밀집도: { title: "선호하는 ", highlight: "관광지 밀집도" },
   여행_템포: { title: "원하는 ", highlight: "여행 템포" },
+  추가_요청사항: { title: "추가로 ", highlight: "고려할 점" },
 };
 
 export const 여행지_목록: { region: string; destinations: string[] }[] = [

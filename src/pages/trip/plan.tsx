@@ -33,6 +33,7 @@ export default function Home() {
   const [userPreferenceString, setUserPreferenceString] = useState("");
   const [selectedDay, setSelectedDay] = useState(1);
   const [pickedThemeIdx, setPickedThemeIdx] = useState(0);
+  const [customRequest, setCustomRequest] = useState("");
 
   const [userOptions, setUserOptions] = useState<
     Record<string, string[]>
@@ -63,7 +64,10 @@ export default function Home() {
     return (
       `예산: ${budget}만원\n` +
       `여행지: ${selectedDestinations.join(", ")}\n` +
-      userOptionSelection.join("\n")
+      userOptionSelection.join("\n") +
+      (customRequest.trim()
+        ? `\n추가 요청사항: ${customRequest.trim()}`
+        : "")
     );
   };
 
@@ -511,6 +515,14 @@ export default function Home() {
                   <br />
                   골라주세요
                 </>
+              ) : currentStepKey === "추가_요청사항" ? (
+                <>
+                  {stepInfo.title}
+                  <br />
+                  <span className="text-[#007aff]">{stepInfo.highlight}</span>이
+                  <br />
+                  있다면 적어주세요
+                </>
               ) : (
                 <>
                   {stepInfo.title}
@@ -522,11 +534,12 @@ export default function Home() {
                 </>
               )}
             </h1>
-            {currentStepKey !== "예산_범위" && (
-              <p className="text-[#007aff] text-[14px] font-medium mt-[6px]">
-                중복 선택이 가능해요
-              </p>
-            )}
+            {currentStepKey !== "예산_범위" &&
+              currentStepKey !== "추가_요청사항" && (
+                <p className="text-[#007aff] text-[14px] font-medium mt-[6px]">
+                  중복 선택이 가능해요
+                </p>
+              )}
           </div>
         </div>
 
@@ -544,6 +557,13 @@ export default function Home() {
                     : [...prev, dest]
                 )
               }
+            />
+          ) : currentStepKey === "추가_요청사항" ? (
+            <textarea
+              value={customRequest}
+              onChange={(e) => setCustomRequest(e.target.value)}
+              placeholder="예) 아이 동반이라 유아 시설이 필요해요 / 매운 음식은 못 먹어요 / 걷는 일정은 적게 해주세요"
+              className="w-full h-[200px] p-[16px] rounded-[16px] border border-[#E5E7EB] text-[15px] leading-[1.6] resize-none outline-none focus:border-[#007aff] placeholder:text-[#9CA3AF]"
             />
           ) : (
             <FunnelOptionList
