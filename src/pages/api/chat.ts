@@ -39,11 +39,16 @@ export default async function handler(
         { role: "system", content: systemPrompt },
         { role: "user", content: prompt },
       ],
+      // JSON 모드: 구문상 유효한 JSON 출력을 보장 (깨진 JSON 근본 차단).
+      // 모든 step의 프롬프트가 "JSON" 출력을 명시하므로 요구사항 충족.
+      response_format: { type: "json_object" },
       max_tokens: 7000,
       temperature: 0.6,
       top_p: 0.9,
-      frequency_penalty: 0.4,
-      presence_penalty: 0.2,
+      // frequency/presence penalty 제거: JSON은 키·따옴표·괄호가 반복되는
+      // 구조라 penalty가 그 반복 토큰을 억제 → 따옴표 누락·구조 붕괴를 유발.
+      frequency_penalty: 0,
+      presence_penalty: 0,
     });
 
     const response = completion.choices[0]?.message?.content || "";
