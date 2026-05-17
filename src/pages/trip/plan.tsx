@@ -12,6 +12,10 @@ import FunnelOptionList from "@/components/FunnelOptionList";
 import DestinationSelect from "@/components/DestinationSelect";
 import BudgetInput from "@/components/BudgetInput";
 import TripRouteMap from "@/components/TripRouteMap";
+import TripTimeline, {
+  type ParsedContent,
+  type ParsedDay,
+} from "@/components/TripTimeline";
 
 const TOTAL_STEPS = FUNNEL_STEP_KEYS.length;
 
@@ -27,6 +31,8 @@ export default function Home() {
   const [currentStep, setCurrentStep] = useState(0);
   const [budget, setBudget] = useState(50); // 50만원 (기본값)
   const [userPreferenceString, setUserPreferenceString] = useState("");
+  const [selectedDay, setSelectedDay] = useState(1);
+  const [pickedThemeIdx, setPickedThemeIdx] = useState(0);
 
   const [userOptions, setUserOptions] = useState<
     Record<string, string[]>
@@ -80,6 +86,7 @@ export default function Home() {
     } catch {
       setThemes([res.data.response]);
     }
+    setPickedThemeIdx(0);
     setPhase("select-theme");
   };
 
@@ -145,69 +152,93 @@ export default function Home() {
   const currentStepKey = FUNNEL_STEP_KEYS[currentStep];
   const stepInfo = STEP_TITLES[currentStepKey];
 
-  // GPT 응답에서 좌표 파싱 (hook은 early return 전에 호출)
-  const parsedCoordinates = useMemo(() => {
+  const parseCoordinate = (
+    raw: unknown
+  ): { lat: number; lng: number } | undefined => {
+    if (!raw) return undefined;
+    const parts = String(raw)
+      .split(",")
+      .map((s) => parseFloat(s.trim()));
+    if (parts.length >= 2 && !isNaN(parts[0]) && !isNaN(parts[1])) {
+      return { lat: parts[0], lng: parts[1] };
+    }
+    return undefined;
+  };
+
+  // GPT 응답을 일자별 구조로 파싱 (hook은 early return 전에 호출)
+  const parsedPlan: ParsedDay[] = useMemo(() => {
     if (!gptPlan) return [];
-    const coords: { lat: number; lng: number; label: string; day: number }[] = [];
-
-    // JSON 파싱 시도
     try {
-      // GPT 응답에서 JSON 부분만 추출
       const jsonMatch = gptPlan.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        const parsed = JSON.parse(jsonMatch[0]);
+      if (!jsonMatch) return [];
+      const parsed = JSON.parse(jsonMatch[0]);
 
-        // 여러 가능한 키 대응
-        const planList =
-          parsed.trip_plan ||
-          parsed.tripPlanList ||
-          parsed.data?.tripPlanList ||
-          parsed.data?.trip_plan ||
-          [];
+      // 여러 가능한 키 대응
+      const planList =
+        parsed.trip_plan ||
+        parsed.tripPlanList ||
+        parsed.data?.tripPlanList ||
+        parsed.data?.trip_plan ||
+        [];
 
-        planList.forEach((dayItem: any) => {
-          const day = dayItem.day || 1;
-          const contents = dayItem.contents || [];
-          contents.forEach((item: any) => {
-            const coordStr = item.place?.coordinate || item.coordinate;
-            if (!coordStr) return;
-            const parts = String(coordStr).split(",").map((s: string) => parseFloat(s.trim()));
-            if (parts.length >= 2 && !isNaN(parts[0]) && !isNaN(parts[1])) {
-              coords.push({
-                lat: parts[0],
-                lng: parts[1],
-                label: `Day${day} ${item.content || ""}`,
-                day,
-              });
-            }
-          });
-        });
-      }
+      return (planList as any[]).map((dayItem, di) => {
+        const contents: ParsedContent[] = (dayItem.contents || []).map(
+          (item: any) => {
+            const place = item.place || {};
+            const coord = parseCoordinate(place.coordinate ?? item.coordinate);
+            const distance = place.distance || {};
+            return {
+              time: item.time,
+              content: item.content || place.description || "장소",
+              place: {
+                rate: place.rate,
+                rateCount: place.rate_count ?? place.rateCount,
+                rateSummary: place.rate_summary ?? place.rateSummary,
+                description: place.description,
+                address: place.address,
+                lat: coord?.lat,
+                lng: coord?.lng,
+                distanceKm: distance.km,
+                distanceTime: distance.time,
+              },
+            };
+          }
+        );
+        return {
+          day: Number(dayItem.day) || di + 1,
+          summary: dayItem.summary,
+          contents,
+        };
+      });
     } catch (e) {
-      console.error("JSON 파싱 실패, 정규식 fallback 시도:", e);
+      console.error("여행 계획 파싱 실패:", e);
+      return [];
     }
-
-    // JSON 파싱 실패 시 정규식으로 coordinate 값 직접 추출
-    if (coords.length === 0) {
-      const regex = /"coordinate"\s*:\s*"([^"]+)"/g;
-      let match;
-      let idx = 1;
-      while ((match = regex.exec(gptPlan)) !== null) {
-        const parts = match[1].split(",").map((s) => parseFloat(s.trim()));
-        if (parts.length >= 2 && !isNaN(parts[0]) && !isNaN(parts[1])) {
-          coords.push({
-            lat: parts[0],
-            lng: parts[1],
-            label: `장소 ${idx}`,
-            day: 1,
-          });
-          idx++;
-        }
-      }
-    }
-
-    return coords;
   }, [gptPlan]);
+
+  // 새 계획이 만들어지면 첫 번째 일자를 선택
+  useEffect(() => {
+    if (parsedPlan.length > 0) setSelectedDay(parsedPlan[0].day);
+  }, [parsedPlan]);
+
+  const selectedDayPlan = useMemo(
+    () =>
+      parsedPlan.find((d) => d.day === selectedDay) ?? parsedPlan[0] ?? null,
+    [parsedPlan, selectedDay]
+  );
+
+  // 선택된 일자의 방문지 좌표 (지도 마커 · 경로용)
+  const dayCoordinates = useMemo(() => {
+    if (!selectedDayPlan) return [];
+    return selectedDayPlan.contents
+      .filter((c) => c.place?.lat != null && c.place?.lng != null)
+      .map((c) => ({
+        lat: c.place!.lat as number,
+        lng: c.place!.lng as number,
+        label: c.content,
+        day: selectedDayPlan.day,
+      }));
+  }, [selectedDayPlan]);
 
   // 1차 로딩: 테마 추천 중
   if (phase === "loading-themes") {
@@ -230,36 +261,91 @@ export default function Home() {
   if (phase === "select-theme") {
     return (
       <main className="flex justify-center w-[400px] h-[100vh]">
-        <div className="w-full flex flex-col p-[20px] h-full">
-          <div className="flex-shrink-0">
-            <div className="mt-[32px] mb-[8px]">
-              <h1 className="font-extrabold text-[26px] leading-[1.3]">
-                {userName}님을 위한
-                <br />
-                <span className="text-[#EB5A2A]">여행 테마</span>를
-                <br />
-                골라주세요
-              </h1>
-              <p className="text-[#9CA3AF] text-[14px] font-medium mt-[6px]">
-                선택한 테마로 상세 일정을 만들어 드릴게요
-              </p>
-            </div>
+        <div className="w-full flex flex-col h-full bg-[#F2F3F5]">
+          {/* 뒤로 */}
+          <div className="flex-shrink-0 px-[20px] pt-[16px]">
+            <button
+              onClick={() => setPhase("funnel")}
+              className="text-[#374151]"
+              aria-label="뒤로"
+            >
+              <svg
+                width="22"
+                height="22"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.75"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M15 18l-6-6 6-6" />
+              </svg>
+            </button>
           </div>
 
-          <div className="flex-1 overflow-y-auto mt-[24px] mb-[20px] min-h-0">
-            <div className="flex flex-col gap-[12px]">
-              {themes.map((theme, idx) => (
-                <button
-                  key={idx}
-                  onClick={() => fetchPlan(theme)}
-                  className="w-full text-left p-[20px] rounded-[16px] bg-[#F3F4F6] hover:bg-[#ff6f3f28] hover:border-[#EB5A2A] border-[2px] border-transparent transition-all duration-200"
-                >
-                  <p className="font-bold text-[17px] text-[#374151] leading-[1.5]">
-                    {theme}
-                  </p>
-                </button>
-              ))}
+          {/* 스크롤 영역 */}
+          <div className="flex-1 overflow-y-auto px-[20px] min-h-0">
+            <h1 className="text-center font-extrabold text-[25px] leading-[1.35] text-[#1F2937] mt-[20px]">
+              {userName}님을 위한 여행 플랜이
+              <br />
+              완성되었어요 ! 🎉
+            </h1>
+
+            <div className="bg-white rounded-[24px] p-[20px] mt-[28px] shadow-[0_2px_20px_rgba(0,0,0,0.05)]">
+              <p className="text-center text-[14px] font-bold text-[#007aff]">
+                완성된 여행 플랜 {themes.length}개
+              </p>
+
+              <div className="flex flex-col gap-[12px] mt-[16px]">
+                {themes.map((theme, idx) => {
+                  const isPicked = idx === pickedThemeIdx;
+                  return (
+                    <button
+                      key={idx}
+                      onClick={() => setPickedThemeIdx(idx)}
+                      aria-pressed={isPicked}
+                      className={`w-full text-left rounded-[16px] p-[18px] flex items-center gap-[14px] border-[2px] transition-all duration-200 ${
+                        isPicked
+                          ? "bg-white border-[#cfff0b] shadow-[0_6px_18px_rgba(0,122,255,0.16)]"
+                          : "bg-white border-[#ECEDF0] hover:border-[#C9D8F2]"
+                      }`}
+                    >
+                      <p className="flex-1 font-bold text-[16px] text-[#1F2937] leading-[1.45] break-keep">
+                        {theme}
+                      </p>
+                      <span
+                        className={`flex-shrink-0 w-[38px] h-[38px] rounded-full flex items-center justify-center transition-colors ${
+                          isPicked ? "bg-[#cfff0b]" : "bg-[#EEF0F2]"
+                        }`}
+                      >
+                        <svg
+                          width="18"
+                          height="18"
+                          viewBox="0 0 24 24"
+                          fill={isPicked ? "#191F28" : "#CDD1D6"}
+                        >
+                          <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
+                        </svg>
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
+
+            <div className="h-[20px]" />
+          </div>
+
+          {/* 하단 고정 버튼 */}
+          <div className="flex-shrink-0 px-[20px] pt-[12px] pb-[24px] bg-[#F2F3F5]">
+            <button
+              onClick={() => themes[pickedThemeIdx] && fetchPlan(themes[pickedThemeIdx])}
+              disabled={themes.length === 0}
+              className="w-full py-[16px] rounded-[16px] bg-[#007aff] text-white font-bold text-[16px] active:bg-[#0062cc] transition-colors disabled:opacity-40"
+            >
+              여행 플랜 선택
+            </button>
           </div>
         </div>
       </main>
@@ -277,7 +363,7 @@ export default function Home() {
           여행 계획을 생성하고 있어요
         </p>
         {selectedTheme && (
-          <p className="text-[#EB5A2A] font-semibold text-[16px]">
+          <p className="text-[#007aff] font-semibold text-[16px]">
             &ldquo;{selectedTheme}&rdquo; 테마
           </p>
         )}
@@ -290,30 +376,98 @@ export default function Home() {
 
   // 최종 결과 화면
   if (phase === "result") {
+    const hasParsedPlan = parsedPlan.length > 0;
+
     return (
       <main className="flex justify-center w-[400px] h-[100vh]">
-        <div className="w-full flex flex-col h-full">
-          {/* 상단: 지도 (50%) */}
-          <div className="h-[50vh] w-full relative">
-            <TripRouteMap coordinates={parsedCoordinates} />
-            {selectedTheme && (
-              <div className="absolute top-[12px] left-[12px] right-[12px] bg-white/90 backdrop-blur-sm rounded-[12px] px-[14px] py-[10px] shadow-md">
-                <p className="text-[#EB5A2A] font-bold text-[14px] truncate">
-                  {selectedTheme}
+        <div className="w-full flex flex-col h-full bg-[#F7F7F8]">
+          {/* 헤더 */}
+          <div className="flex-shrink-0 flex items-center gap-[10px] px-[16px] py-[12px] bg-white border-b border-[#F0F0F0]">
+            <button
+              onClick={() => setPhase("select-theme")}
+              className="flex-shrink-0 text-[#374151]"
+              aria-label="뒤로"
+            >
+              <svg
+                width="22"
+                height="22"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.75"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M15 18l-6-6 6-6" />
+              </svg>
+            </button>
+            <div className="min-w-0">
+              <p className="font-extrabold text-[16px] text-[#1F2937] truncate">
+                {selectedTheme || `${userName}님 맞춤 여행`}
+              </p>
+              {selectedDestinations.length > 0 && (
+                <p className="text-[12px] text-[#9CA3AF] truncate">
+                  {selectedDestinations.join(", ")}
+                </p>
+              )}
+            </div>
+          </div>
+
+          {/* 상단: 지도 (40%) - 선택한 일자의 경로 */}
+          <div className="h-[40vh] w-full relative flex-shrink-0">
+            <TripRouteMap coordinates={dayCoordinates} />
+            {hasParsedPlan && (
+              <div className="absolute bottom-[12px] left-[12px] bg-[#191F28]/85 backdrop-blur-sm rounded-[10px] px-[12px] py-[6px] shadow-md">
+                <p className="text-[13px] font-bold text-white">
+                  <span className="text-[#cfff0b]">Day {selectedDay}</span> · 방문지{" "}
+                  {dayCoordinates.length}곳
                 </p>
               </div>
             )}
           </div>
 
-          {/* 하단: 여행 계획 JSON (50%) */}
-          <div className="h-[50vh] w-full overflow-y-auto bg-white p-[16px]">
-            <h5 className="font-bold text-[20px] mb-[12px]">
-              <span className="text-[#eb5a2a]">{userName}님</span> 맞춤 여행계획
-            </h5>
-            <pre className="text-[13px] bg-[#F9FAFB] rounded-[12px] p-[14px] whitespace-pre-wrap break-words leading-[1.6]">
-              {gptPlan}
-            </pre>
-          </div>
+          {hasParsedPlan ? (
+            <>
+              {/* 일자 탭 */}
+              <div className="flex-shrink-0 bg-white border-b border-[#F0F0F0]">
+                <div className="flex gap-[8px] overflow-x-auto px-[16px] py-[12px] [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+                  {parsedPlan.map((d) => (
+                    <button
+                      key={d.day}
+                      onClick={() => setSelectedDay(d.day)}
+                      className={`flex-shrink-0 px-[16px] py-[8px] rounded-full text-[14px] font-bold transition-colors ${
+                        d.day === selectedDay
+                          ? "bg-[#cfff0b] text-[#191F28] shadow-sm"
+                          : "bg-[#F3F4F6] text-[#6B7280]"
+                      }`}
+                    >
+                      Day {d.day}
+                    </button>
+                  ))}
+                </div>
+                {selectedDayPlan?.summary && (
+                  <p className="px-[16px] pb-[12px] text-[14px] text-[#374151] font-semibold leading-[1.4]">
+                    {selectedDayPlan.summary}
+                  </p>
+                )}
+              </div>
+
+              {/* 하단: 일자별 타임라인 */}
+              <div className="flex-1 overflow-y-auto">
+                {selectedDayPlan && <TripTimeline day={selectedDayPlan} />}
+              </div>
+            </>
+          ) : (
+            // 파싱 실패 시 원문 표시 (안전망)
+            <div className="flex-1 overflow-y-auto bg-white p-[16px]">
+              <h5 className="font-bold text-[18px] mb-[12px]">
+                <span className="text-primary">{userName}님</span> 맞춤 여행계획
+              </h5>
+              <pre className="text-[13px] bg-[#F9FAFB] rounded-[12px] p-[14px] whitespace-pre-wrap break-words leading-[1.6]">
+                {gptPlan}
+              </pre>
+            </div>
+          )}
         </div>
       </main>
     );
@@ -345,7 +499,7 @@ export default function Home() {
                 <>
                   {stepInfo.title}
                   <br />
-                  <span className="text-[#EB5A2A]">{stepInfo.highlight}</span>을
+                  <span className="text-[#007aff]">{stepInfo.highlight}</span>을
                   <br />
                   설정해주세요
                 </>
@@ -353,7 +507,7 @@ export default function Home() {
                 <>
                   {userName}님{stepInfo.title}
                   <br />
-                  <span className="text-[#EB5A2A]">{stepInfo.highlight}</span>을
+                  <span className="text-[#007aff]">{stepInfo.highlight}</span>을
                   <br />
                   골라주세요
                 </>
@@ -361,7 +515,7 @@ export default function Home() {
                 <>
                   {stepInfo.title}
                   <br />
-                  <span className="text-[#EB5A2A]">{stepInfo.highlight}</span>
+                  <span className="text-[#007aff]">{stepInfo.highlight}</span>
                   {currentStepKey === "여행지_입력"
                     ? "를\n선택해주세요"
                     : "을(를)\n선택해주세요"}
@@ -369,7 +523,7 @@ export default function Home() {
               )}
             </h1>
             {currentStepKey !== "예산_범위" && (
-              <p className="text-[#EB5A2A] text-[14px] font-medium mt-[6px]">
+              <p className="text-[#007aff] text-[14px] font-medium mt-[6px]">
                 중복 선택이 가능해요
               </p>
             )}
@@ -410,7 +564,7 @@ export default function Home() {
           </button>
           <button
             onClick={handleNext}
-            className="flex-1 py-[14px] rounded-[16px] bg-[#EB5A2A] text-white font-bold text-[16px]"
+            className="flex-1 py-[14px] rounded-[16px] bg-[#007aff] text-white font-bold text-[16px] active:bg-[#0062cc] transition-colors"
           >
             {currentStep === TOTAL_STEPS - 1 ? "완료" : "다음으로"}
           </button>

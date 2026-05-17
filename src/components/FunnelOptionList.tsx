@@ -17,8 +17,8 @@ const FunnelOptionList = ({
         key={item}
         className={`w-full py-[14px] px-[20px] rounded-[16px] text-[16px] font-medium transition-all duration-200 ${
           selected.includes(item)
-            ? "bg-[#EB5A2A] text-white font-semibold shadow-md"
-            : "bg-[#F3F4F6] text-[#374151] hover:bg-[#ff6f3f28] hover:text-[#EB5A2A]"
+            ? "bg-[#007aff] text-white font-semibold shadow-md"
+            : "bg-[#F3F4F6] text-[#374151] hover:bg-[#007aff28] hover:text-[#007aff]"
         }`}
         onClick={() => onToggle(item)}
       >

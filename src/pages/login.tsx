@@ -5,7 +5,7 @@ import { useEffect } from "react";
 import axios from "axios";
 import toast from "react-hot-toast";
 import Cookies from "js-cookie";
-import { IconGoogle, IconNaver } from "../../public/icons";
+import { IconGoogle } from "../../public/icons";
 import Logo from "/public/images/logo.png";
 
 const GOOGLE_SOCIAL_LOGIN_URL = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID}&redirect_uri=${process.env.NEXT_PUBLIC_REDIRECT_URI}&response_type=code&scope=email profile`;
@@ -48,13 +48,6 @@ function Index() {
         >
           <IconGoogle alt="google" />
           Google 계정으로 로그인
-        </Link>
-        <Link
-          className="w-[330px] h-[50px] bg-[#00BF19] flex border rounded-[10px] flex items-center justify-center gap-[15px] text-[16px] font-semibold text-[#ffffff]"
-          href={GOOGLE_SOCIAL_LOGIN_URL}
-        >
-          <IconNaver alt="naver" />
-          Naver 계정으로 로그인
         </Link>
       </section>
     </main>

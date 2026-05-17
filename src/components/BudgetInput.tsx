@@ -78,7 +78,7 @@ const BudgetInput = ({ budget, onChange }: BudgetInputProps) => {
                 onKeyDown={(e) => {
                   if (e.key === "Enter") commitInput();
                 }}
-                className="w-[100px] text-[36px] font-extrabold text-[#EB5A2A] text-center bg-transparent border-b-[2px] border-[#EB5A2A] outline-none"
+                className="w-[100px] text-[36px] font-extrabold text-[#007aff] text-center bg-transparent border-b-[2px] border-[#007aff] outline-none"
               />
               <span className="text-[20px] font-bold text-[#374151] ml-[4px]">
                 만원
@@ -86,7 +86,7 @@ const BudgetInput = ({ budget, onChange }: BudgetInputProps) => {
             </span>
           ) : (
             <>
-              <span className="text-[36px] font-extrabold text-[#EB5A2A] border-b-[2px] border-transparent">
+              <span className="text-[36px] font-extrabold text-[#007aff] border-b-[2px] border-transparent">
                 {budget}
               </span>
               <span className="text-[20px] font-bold text-[#374151] ml-[4px]">

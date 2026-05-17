@@ -11,9 +11,9 @@ const Button = ({
     <button
       className={`${
         isSelected
-          ? "bg-[#ff6f3f28] text-[#EB5A2A] font-semibold"
+          ? "bg-[#007aff28] text-[#007aff] font-semibold"
           : "bg-[#F3F4F6] font-medium"
-      }  text-[14px] w-fit min-w-[38px] font-medium rounded-full py-[5px] px-[10px] whitespace-nowrap  shadow-sm  hover:bg-[#ff6f3f28] hover:text-[#EB5A2A] hover:font-bold`}
+      }  text-[14px] w-fit min-w-[38px] font-medium rounded-full py-[5px] px-[10px] whitespace-nowrap  shadow-sm  hover:bg-[#007aff28] hover:text-[#007aff] hover:font-bold`}
       onClick={onClick}
     >
       {text}

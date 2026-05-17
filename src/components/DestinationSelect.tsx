@@ -18,8 +18,8 @@ const DestinationSelect = ({ selected, onToggle }: DestinationSelectProps) => (
               key={dest}
               className={`py-[8px] px-[16px] rounded-full text-[14px] font-medium transition-all duration-200 border-[1px] ${
                 selected.includes(dest)
-                  ? "bg-[#ff6f3f28] text-[#EB5A2A] border-[#EB5A2A] font-semibold"
-                  : "bg-white text-[#374151] border-[#D1D5DB] hover:bg-[#ff6f3f28] hover:text-[#EB5A2A] hover:border-[#EB5A2A]"
+                  ? "bg-[#007aff28] text-[#007aff] border-[#007aff] font-semibold"
+                  : "bg-white text-[#374151] border-[#D1D5DB] hover:bg-[#007aff28] hover:text-[#007aff] hover:border-[#007aff]"
               }`}
               onClick={() => onToggle(dest)}
             >
