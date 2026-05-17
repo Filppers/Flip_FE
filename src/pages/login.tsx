@@ -6,9 +6,8 @@ import axios from "axios";
 import toast from "react-hot-toast";
 import Cookies from "js-cookie";
 import { IconGoogle } from "../../public/icons";
+import { GOOGLE_SOCIAL_LOGIN_URL } from "@/constants";
 import Logo from "/public/images/logo.png";
-
-const GOOGLE_SOCIAL_LOGIN_URL = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID}&redirect_uri=${process.env.NEXT_PUBLIC_REDIRECT_URI}&response_type=code&scope=email profile`;
 
 function Index() {
   const router = useRouter();

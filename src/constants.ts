@@ -122,3 +122,6 @@ export const 사용자_취향_입력 = {
   // 환경_선호: ["해변", "산악 지역", "사막", "도시 중심지", "전원/시골"],
   // 특별히_하고싶은_엑티비티_활동_혹은_특별히_방문하고싶은_지역_축제: "",
 };
+
+// 구글 소셜 로그인 URL (index·login 공용 — 중복 정의 방지)
+export const GOOGLE_SOCIAL_LOGIN_URL = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID}&redirect_uri=${process.env.NEXT_PUBLIC_REDIRECT_URI}&response_type=code&scope=email profile`;
