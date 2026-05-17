@@ -21,6 +21,74 @@ const TOTAL_STEPS = FUNNEL_STEP_KEYS.length;
 
 type Phase = "funnel" | "loading-themes" | "select-theme" | "loading-plan" | "result";
 
+// GPT 응답에서 JSON 본문만 추출 (코드펜스/앞뒤 설명 텍스트 제거)
+const extractJson = (text: string): string | null => {
+  const noFence = text.replace(/```json\s*|```/gi, "");
+  const start = noFence.indexOf("{");
+  const end = noFence.lastIndexOf("}");
+  if (start === -1 || end === -1 || end <= start) return null;
+  return noFence.slice(start, end + 1);
+};
+
+// 스마트 따옴표 → 일반 따옴표
+const normalizeQuotes = (s: string): string =>
+  s.replace(/[“”]/g, '"').replace(/[‘’]/g, "'");
+
+// GPT가 섞어 보내는 작은따옴표 키/값을 큰따옴표로 정규화하고
+// trailing comma를 제거한다. 문자열 내부 따옴표는 보존/이스케이프하므로
+// "rateSummary": "'맛집'" 같은 정상 값이 깨지지 않는다.
+const toStrictJson = (input: string): string => {
+  const s = normalizeQuotes(input);
+  let out = "";
+  let inStr = false;
+  let quote = "";
+  for (let i = 0; i < s.length; i++) {
+    const ch = s[i];
+    if (inStr) {
+      if (ch === "\\" && i + 1 < s.length) {
+        out += ch + s[i + 1];
+        i++;
+        continue;
+      }
+      if (ch === quote) {
+        out += '"';
+        inStr = false;
+        continue;
+      }
+      // 큰따옴표로 감싸므로 내부 리터럴 " 는 이스케이프
+      out += ch === '"' ? '\\"' : ch;
+      continue;
+    }
+    if (ch === '"' || ch === "'") {
+      inStr = true;
+      quote = ch;
+      out += '"';
+      continue;
+    }
+    if (ch === ",") {
+      // 뒤 공백을 건너뛰어 } 또는 ] 면 trailing comma → 버림
+      let j = i + 1;
+      while (j < s.length && /\s/.test(s[j])) j++;
+      if (s[j] === "}" || s[j] === "]") continue;
+    }
+    out += ch;
+  }
+  return out;
+};
+
+// 1차: 그대로 파싱 → 실패 시 정규화 후 재시도. 둘 다 실패하면 null
+const parseLooseJson = (raw: string): any | null => {
+  try {
+    return JSON.parse(raw);
+  } catch {
+    try {
+      return JSON.parse(toStrictJson(raw));
+    } catch {
+      return null;
+    }
+  }
+};
+
 export default function Home() {
   const [phase, setPhase] = useState<Phase>("funnel");
   const [themes, setThemes] = useState<string[]>([]);
@@ -83,10 +151,10 @@ export default function Home() {
     });
 
     try {
-      const raw = res.data.response.replace(/```json\n?|```/g, "").trim();
-      const parsed = JSON.parse(raw);
-      const summaries: string[] = parsed.trip_summary || [];
-      setThemes(summaries.map((s) => s));
+      const jsonStr = extractJson(res.data.response);
+      const parsed = jsonStr ? parseLooseJson(jsonStr) : null;
+      const summaries: string[] = parsed?.trip_summary || [];
+      setThemes(summaries.length > 0 ? summaries : [res.data.response]);
     } catch {
       setThemes([res.data.response]);
     }
@@ -173,9 +241,10 @@ export default function Home() {
   const parsedPlan: ParsedDay[] = useMemo(() => {
     if (!gptPlan) return [];
     try {
-      const jsonMatch = gptPlan.match(/\{[\s\S]*\}/);
-      if (!jsonMatch) return [];
-      const parsed = JSON.parse(jsonMatch[0]);
+      const jsonStr = extractJson(gptPlan);
+      if (!jsonStr) return [];
+      const parsed = parseLooseJson(jsonStr);
+      if (!parsed) return [];
 
       // 여러 가능한 키 대응
       const planList =
