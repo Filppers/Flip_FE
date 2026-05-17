@@ -4,14 +4,8 @@ export const FUNNEL_STEP_KEYS = [
   "여행할_달",
   "여행_기간",
   "여행_동반자",
-  "여행_인원_연령대",
   "여행_스타일",
-  "여행의_목적",
   "음식_취향",
-  "선호하는_여행_시간대",
-  "쇼핑_시간",
-  "관광지_밀집도",
-  "여행_템포",
   "추가_요청사항",
 ] as const;
 
@@ -25,15 +19,9 @@ export const STEP_TITLES: Record<
   여행할_달: { title: "여행하고 싶은 ", highlight: "달" },
   여행_기간: { title: "원하는 ", highlight: "여행 기간" },
   여행_동반자: { title: "함께 떠날 ", highlight: "여행 동반자" },
-  여행_인원_연령대: { title: "여행 인원의 ", highlight: "연령대" },
   예산_범위: { title: "이번 여행의 ", highlight: "예산" },
   여행_스타일: { title: "의 ", highlight: "여행 스타일" },
-  여행의_목적: { title: "이번 여행의 ", highlight: "목적" },
   음식_취향: { title: "선호하는 ", highlight: "음식 취향" },
-  선호하는_여행_시간대: { title: "선호하는 ", highlight: "여행 시간대" },
-  쇼핑_시간: { title: "원하는 ", highlight: "쇼핑 시간" },
-  관광지_밀집도: { title: "선호하는 ", highlight: "관광지 밀집도" },
-  여행_템포: { title: "원하는 ", highlight: "여행 템포" },
   추가_요청사항: { title: "추가로 ", highlight: "고려할 점" },
 };
 
