@@ -3,12 +3,14 @@ import { useEffect, useMemo, useState } from "react";
 import Cookies from "js-cookie";
 import { IconSpinner } from "../../../public/icons";
 import {
-  사용자_취향_입력,
+  기본_선택_옵션,
+  취향_옵션,
   FUNNEL_STEP_KEYS,
-  STEP_TITLES,
+  STEP_META,
 } from "@/constants";
 import ProgressBar from "@/components/ProgressBar";
 import FunnelOptionList from "@/components/FunnelOptionList";
+import PreferenceCardList from "@/components/PreferenceCardList";
 import DestinationSelect from "@/components/DestinationSelect";
 import BudgetInput from "@/components/BudgetInput";
 import TripRouteMap from "@/components/TripRouteMap";
@@ -90,6 +92,19 @@ const parseLooseJson = (raw: string): any | null => {
   }
 };
 
+// 헤더 제목에서 accent 부분만 파란색으로 강조. \n은 whitespace-pre-line으로 줄바꿈 처리.
+const renderHeading = (heading: string, accent?: string) => {
+  if (!accent || !heading.includes(accent)) return heading;
+  const idx = heading.indexOf(accent);
+  return (
+    <>
+      {heading.slice(0, idx)}
+      <span className="text-[#007aff]">{accent}</span>
+      {heading.slice(idx + accent.length)}
+    </>
+  );
+};
+
 export default function Home() {
   const [phase, setPhase] = useState<Phase>("funnel");
   const [themes, setThemes] = useState<string[]>([]);
@@ -103,36 +118,39 @@ export default function Home() {
   const [selectedDay, setSelectedDay] = useState(1);
   const [pickedThemeIdx, setPickedThemeIdx] = useState(0);
   const [customRequest, setCustomRequest] = useState("");
+  const [companions, setCompanions] = useState(""); // 여행 구성원 (자유 텍스트)
 
-  const [userOptions, setUserOptions] = useState<
-    Record<string, string[]>
-  >({
+  // 선택형 단계(달·기간 + 취향 카드 5종)의 선택값
+  const [userOptions, setUserOptions] = useState<Record<string, string[]>>({
     여행할_달: [],
     여행_기간: [],
-    여행_인원_연령대: [],
-    여행_스타일: [],
-    여행_동반자: [],
-    음식_취향: [],
-    여행의_목적: [],
-    선호하는_여행_시간대: [],
-    활동_강도: [],
-    쇼핑_시간: [],
-    관광지_밀집도: [],
-    여행_템포: [],
+    예산_집중_포인트: [],
+    숙박_스타일: [],
+    장소_선호: [],
+    음식_패턴: [],
+    하루_리듬: [],
   });
 
+  // GPT에 전달할 라벨(한국어) 매핑
+  const OPTION_LABELS: Record<string, string> = {
+    여행할_달: "여행할 달",
+    여행_기간: "여행 기간",
+    예산_집중_포인트: "예산 집중 포인트",
+    숙박_스타일: "숙박 스타일",
+    장소_선호: "여행 장소 선호도",
+    음식_패턴: "음식 취향 및 식사 패턴",
+    하루_리듬: "하루 리듬(시간 활용)",
+  };
+
   const buildPreferenceString = () => {
-    const userOptionSelection = Object.keys(사용자_취향_입력)
-      .filter(
-        (key) => userOptions[key as keyof typeof 사용자_취향_입력]?.length > 0
-      )
-      .map(
-        (key) => key + " : " + userOptions[key as keyof typeof 사용자_취향_입력]
-      );
+    const userOptionSelection = Object.entries(userOptions)
+      .filter(([, v]) => v.length > 0)
+      .map(([key, v]) => `${OPTION_LABELS[key] ?? key} : ${v.join(", ")}`);
 
     return (
       `예산: ${budget}만원\n` +
       `여행지: ${selectedDestinations.join(", ")}\n` +
+      (companions.trim() ? `여행 구성원: ${companions.trim()}\n` : "") +
       userOptionSelection.join("\n") +
       (customRequest.trim()
         ? `\n추가 요청사항: ${customRequest.trim()}`
@@ -172,9 +190,13 @@ export default function Home() {
       선택한_계획: theme,
       여행지: selectedDestinations.join(", "),
       예산: `${budget}만원`,
+      ...(companions.trim() ? { 여행_구성원: companions.trim() } : {}),
       ...Object.fromEntries(
-        Object.entries(userOptions).filter(([, v]) => v.length > 0).map(([k, v]) => [k, v.join(", ")])
+        Object.entries(userOptions)
+          .filter(([, v]) => v.length > 0)
+          .map(([k, v]) => [OPTION_LABELS[k] ?? k, v.join(", ")])
       ),
+      ...(customRequest.trim() ? { 추가_요청사항: customRequest.trim() } : {}),
     });
 
     const res = await axios.post("/api/chat", {
@@ -214,16 +236,23 @@ export default function Home() {
   };
 
   const handleToggleOption = (optionKey: string, item: string) => {
-    setUserOptions((prev) => ({
-      ...prev,
-      [optionKey]: prev[optionKey]?.includes(item)
-        ? prev[optionKey].filter((el) => el !== item)
-        : [...(prev[optionKey] || []), item],
-    }));
+    const pref = 취향_옵션[optionKey]; // 카드형 단계만 존재 (달·기간은 undefined)
+    const multi = pref ? pref.multiSelect : true; // 달·기간은 복수 선택
+    const max = pref?.max;
+
+    setUserOptions((prev) => {
+      const cur = prev[optionKey] || [];
+      if (cur.includes(item)) {
+        return { ...prev, [optionKey]: cur.filter((el) => el !== item) };
+      }
+      if (!multi) return { ...prev, [optionKey]: [item] }; // 단일: 교체
+      if (max != null && cur.length >= max) return prev; // 최대치 도달
+      return { ...prev, [optionKey]: [...cur, item] };
+    });
   };
 
   const currentStepKey = FUNNEL_STEP_KEYS[currentStep];
-  const stepInfo = STEP_TITLES[currentStepKey];
+  const stepMeta = STEP_META[currentStepKey];
 
   // "25,000원", "25000", 25000 등 다양한 형태를 원 단위 정수로 변환
   const parseCost = (raw: unknown): number | undefined => {
@@ -576,8 +605,9 @@ export default function Home() {
 
               {/* 하단: 전체 예산 요약 + 일자별 타임라인 (스크롤 영역) */}
               <div className="flex-1 overflow-y-auto">
-                {/* 전체 여행 예상 예산 vs 설정 예산 */}
-                {totalEstimatedCost > 0 && (
+                {/* 전체 여행 예상 예산 vs 설정 예산 (첫 일자에서만 노출) */}
+                {totalEstimatedCost > 0 &&
+                  selectedDay === parsedPlan[0]?.day && (
                   <div className="mx-[16px] mt-[16px] rounded-[14px] bg-white border border-[#F0F0F0] px-[14px] py-[12px] shadow-sm">
                     <div className="flex items-end justify-between">
                       <span className="text-[13px] font-bold text-[#6B7280]">
@@ -659,48 +689,14 @@ export default function Home() {
           <ProgressBar current={currentStep} total={TOTAL_STEPS} />
 
           <div className="mt-[32px] mb-[8px]">
-            <h1 className="font-extrabold text-[26px] leading-[1.3]">
-              {currentStepKey === "예산_범위" ? (
-                <>
-                  {stepInfo.title}
-                  <br />
-                  <span className="text-[#007aff]">{stepInfo.highlight}</span>을
-                  <br />
-                  설정해주세요
-                </>
-              ) : currentStepKey === "여행_스타일" ? (
-                <>
-                  {userName}님{stepInfo.title}
-                  <br />
-                  <span className="text-[#007aff]">{stepInfo.highlight}</span>을
-                  <br />
-                  골라주세요
-                </>
-              ) : currentStepKey === "추가_요청사항" ? (
-                <>
-                  {stepInfo.title}
-                  <br />
-                  <span className="text-[#007aff]">{stepInfo.highlight}</span>이
-                  <br />
-                  있다면 적어주세요
-                </>
-              ) : (
-                <>
-                  {stepInfo.title}
-                  <br />
-                  <span className="text-[#007aff]">{stepInfo.highlight}</span>
-                  {currentStepKey === "여행지_입력"
-                    ? "를\n선택해주세요"
-                    : "을(를)\n선택해주세요"}
-                </>
-              )}
+            <h1 className="font-extrabold text-[26px] leading-[1.3] whitespace-pre-line">
+              {renderHeading(stepMeta.heading, stepMeta.accent)}
             </h1>
-            {currentStepKey !== "예산_범위" &&
-              currentStepKey !== "추가_요청사항" && (
-                <p className="text-[#007aff] text-[14px] font-medium mt-[6px]">
-                  중복 선택이 가능해요
-                </p>
-              )}
+            {stepMeta.hint && (
+              <p className="text-[#007aff] text-[14px] font-medium mt-[8px]">
+                {stepMeta.hint}
+              </p>
+            )}
           </div>
         </div>
 
@@ -719,6 +715,13 @@ export default function Home() {
                 )
               }
             />
+          ) : currentStepKey === "여행_구성원" ? (
+            <textarea
+              value={companions}
+              onChange={(e) => setCompanions(e.target.value)}
+              placeholder="예) 20대 친구와 둘이 / 60대 부모님과 효도 여행 / 아이 동반 3인 가족 / 연인과 단둘이"
+              className="w-full h-[160px] p-[16px] rounded-[16px] border border-[#E5E7EB] text-[15px] leading-[1.6] resize-none outline-none focus:border-[#007aff] placeholder:text-[#9CA3AF]"
+            />
           ) : currentStepKey === "추가_요청사항" ? (
             <textarea
               value={customRequest}
@@ -726,9 +729,15 @@ export default function Home() {
               placeholder="예) 아이 동반이라 유아 시설이 필요해요 / 매운 음식은 못 먹어요 / 걷는 일정은 적게 해주세요"
               className="w-full h-[200px] p-[16px] rounded-[16px] border border-[#E5E7EB] text-[15px] leading-[1.6] resize-none outline-none focus:border-[#007aff] placeholder:text-[#9CA3AF]"
             />
+          ) : 취향_옵션[currentStepKey] ? (
+            <PreferenceCardList
+              step={취향_옵션[currentStepKey]}
+              selected={userOptions[currentStepKey] || []}
+              onToggle={(item) => handleToggleOption(currentStepKey, item)}
+            />
           ) : (
             <FunnelOptionList
-              optionKey={currentStepKey as keyof typeof 사용자_취향_입력}
+              optionKey={currentStepKey as keyof typeof 기본_선택_옵션}
               selected={userOptions[currentStepKey] || []}
               onToggle={(item) => handleToggleOption(currentStepKey, item)}
             />
