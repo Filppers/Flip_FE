@@ -13,6 +13,7 @@ export interface ParsedPlace {
 export interface ParsedContent {
   time?: string;
   content: string;
+  cost?: number; // 예상 비용 (원)
   place?: ParsedPlace;
 }
 
@@ -21,6 +22,10 @@ export interface ParsedDay {
   summary?: string;
   contents: ParsedContent[];
 }
+
+// 원 단위 정수를 "12,000원" 형태로 포맷
+export const formatKRW = (won: number): string =>
+  `${Math.round(won).toLocaleString("ko-KR")}원`;
 
 interface TripTimelineProps {
   day: ParsedDay;
@@ -82,6 +87,17 @@ const TripTimeline = ({ day }: TripTimelineProps) => {
                   <p className="text-[12px] text-[#9CA3AF] mt-[8px] line-clamp-1">
                     📍 {c.place.address}
                   </p>
+                )}
+
+                {c.cost != null && (
+                  <div className="mt-[10px] pt-[10px] border-t border-[#F3F4F6] flex items-center justify-between">
+                    <span className="text-[12px] text-[#9CA3AF] font-medium">
+                      예상 비용
+                    </span>
+                    <span className="text-[13px] font-bold text-[#1F2937]">
+                      {c.cost > 0 ? `약 ${formatKRW(c.cost)}` : "무료"}
+                    </span>
+                  </div>
                 )}
               </div>
             </div>

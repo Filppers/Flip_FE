@@ -13,6 +13,7 @@ import DestinationSelect from "@/components/DestinationSelect";
 import BudgetInput from "@/components/BudgetInput";
 import TripRouteMap from "@/components/TripRouteMap";
 import TripTimeline, {
+  formatKRW,
   type ParsedContent,
   type ParsedDay,
 } from "@/components/TripTimeline";
@@ -224,6 +225,14 @@ export default function Home() {
   const currentStepKey = FUNNEL_STEP_KEYS[currentStep];
   const stepInfo = STEP_TITLES[currentStepKey];
 
+  // "25,000원", "25000", 25000 등 다양한 형태를 원 단위 정수로 변환
+  const parseCost = (raw: unknown): number | undefined => {
+    if (raw == null) return undefined;
+    if (typeof raw === "number") return isNaN(raw) ? undefined : raw;
+    const digits = String(raw).replace(/[^0-9]/g, "");
+    return digits ? Number(digits) : undefined;
+  };
+
   const parseCoordinate = (
     raw: unknown
   ): { lat: number; lng: number } | undefined => {
@@ -263,6 +272,7 @@ export default function Home() {
             return {
               time: item.time,
               content: item.content || place.description || "장소",
+              cost: parseCost(item.cost ?? place.cost),
               place: {
                 rate: place.rate,
                 rateCount: place.rate_count ?? place.rateCount,
@@ -312,6 +322,33 @@ export default function Home() {
         day: selectedDayPlan.day,
       }));
   }, [selectedDayPlan]);
+
+  // 전체 여행 예상 예산 (모든 일자 · 모든 활동 비용 합계)
+  const totalEstimatedCost = useMemo(
+    () =>
+      parsedPlan.reduce(
+        (sum, d) =>
+          sum + d.contents.reduce((s, c) => s + (c.cost ?? 0), 0),
+        0
+      ),
+    [parsedPlan]
+  );
+
+  // 선택된 일자의 예상 예산 합계
+  const selectedDayTotal = useMemo(
+    () =>
+      selectedDayPlan
+        ? selectedDayPlan.contents.reduce((s, c) => s + (c.cost ?? 0), 0)
+        : 0,
+    [selectedDayPlan]
+  );
+
+  const budgetWon = budget * 10000; // 만원 → 원
+  const isOverBudget = totalEstimatedCost > budgetWon;
+  const budgetPercent =
+    budgetWon > 0
+      ? Math.min(100, Math.round((totalEstimatedCost / budgetWon) * 100))
+      : 0;
 
   // 1차 로딩: 테마 추천 중
   if (phase === "loading-themes") {
@@ -518,10 +555,65 @@ export default function Home() {
                     </button>
                   ))}
                 </div>
-                {selectedDayPlan?.summary && (
-                  <p className="px-[16px] pb-[12px] text-[14px] text-[#374151] font-semibold leading-[1.4]">
-                    {selectedDayPlan.summary}
-                  </p>
+                {(selectedDayPlan?.summary || selectedDayTotal > 0) && (
+                  <div className="px-[16px] pb-[12px] flex items-start justify-between gap-[10px]">
+                    {selectedDayPlan?.summary && (
+                      <p className="flex-1 text-[14px] text-[#374151] font-semibold leading-[1.4]">
+                        {selectedDayPlan.summary}
+                      </p>
+                    )}
+                    {selectedDayTotal > 0 && (
+                      <span className="flex-shrink-0 text-[12px] font-bold text-[#6B7280] whitespace-nowrap mt-[2px]">
+                        이날 예상{" "}
+                        <span className="text-[#007aff]">
+                          약 {formatKRW(selectedDayTotal)}
+                        </span>
+                      </span>
+                    )}
+                  </div>
+                )}
+
+                {/* 전체 여행 예상 예산 vs 설정 예산 */}
+                {totalEstimatedCost > 0 && (
+                  <div className="mx-[16px] mb-[14px] rounded-[14px] bg-[#F7F7F8] border border-[#F0F0F0] px-[14px] py-[12px]">
+                    <div className="flex items-end justify-between">
+                      <span className="text-[13px] font-bold text-[#6B7280]">
+                        전체 예상 예산
+                      </span>
+                      <span
+                        className={`text-[18px] font-extrabold ${
+                          isOverBudget ? "text-[#EF4444]" : "text-[#007aff]"
+                        }`}
+                      >
+                        약 {formatKRW(totalEstimatedCost)}
+                      </span>
+                    </div>
+
+                    {/* 진행 바 */}
+                    <div className="mt-[8px] h-[8px] w-full rounded-full bg-[#E5E7EB] overflow-hidden">
+                      <div
+                        className={`h-full rounded-full transition-all ${
+                          isOverBudget ? "bg-[#EF4444]" : "bg-[#007aff]"
+                        }`}
+                        style={{ width: `${budgetPercent}%` }}
+                      />
+                    </div>
+
+                    <div className="mt-[6px] flex items-center justify-between">
+                      <span className="text-[12px] text-[#9CA3AF] font-medium">
+                        설정 예산 {formatKRW(budgetWon)}
+                      </span>
+                      <span
+                        className={`text-[12px] font-bold ${
+                          isOverBudget ? "text-[#EF4444]" : "text-[#16A34A]"
+                        }`}
+                      >
+                        {isOverBudget
+                          ? `예산 ${formatKRW(totalEstimatedCost - budgetWon)} 초과`
+                          : `예산 내 · ${formatKRW(budgetWon - totalEstimatedCost)} 여유`}
+                      </span>
+                    </div>
+                  </div>
                 )}
               </div>
 
