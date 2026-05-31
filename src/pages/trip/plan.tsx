@@ -572,10 +572,13 @@ export default function Home() {
                     )}
                   </div>
                 )}
+              </div>
 
+              {/* 하단: 전체 예산 요약 + 일자별 타임라인 (스크롤 영역) */}
+              <div className="flex-1 overflow-y-auto">
                 {/* 전체 여행 예상 예산 vs 설정 예산 */}
                 {totalEstimatedCost > 0 && (
-                  <div className="mx-[16px] mb-[14px] rounded-[14px] bg-[#F7F7F8] border border-[#F0F0F0] px-[14px] py-[12px]">
+                  <div className="mx-[16px] mt-[16px] rounded-[14px] bg-white border border-[#F0F0F0] px-[14px] py-[12px] shadow-sm">
                     <div className="flex items-end justify-between">
                       <span className="text-[13px] font-bold text-[#6B7280]">
                         전체 예상 예산
@@ -615,10 +618,7 @@ export default function Home() {
                     </div>
                   </div>
                 )}
-              </div>
 
-              {/* 하단: 일자별 타임라인 */}
-              <div className="flex-1 overflow-y-auto">
                 {selectedDayPlan && <TripTimeline day={selectedDayPlan} />}
               </div>
             </>
