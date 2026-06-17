@@ -1,7 +1,7 @@
-import { 사용자_취향_입력 } from "@/constants";
+import { 기본_선택_옵션 } from "@/constants";
 
 interface FunnelOptionListProps {
-  optionKey: keyof typeof 사용자_취향_입력;
+  optionKey: keyof typeof 기본_선택_옵션;
   selected: string[];
   onToggle: (item: string) => void;
 }
@@ -12,7 +12,7 @@ const FunnelOptionList = ({
   onToggle,
 }: FunnelOptionListProps) => (
   <div className="flex flex-col gap-[10px] w-full">
-    {사용자_취향_입력[optionKey].map((item) => (
+    {기본_선택_옵션[optionKey].map((item) => (
       <button
         key={item}
         className={`w-full py-[14px] px-[20px] rounded-[16px] text-[16px] font-medium transition-all duration-200 ${

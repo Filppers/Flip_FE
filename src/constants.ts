@@ -3,36 +3,70 @@ export const FUNNEL_STEP_KEYS = [
   "여행지_입력",
   "여행할_달",
   "여행_기간",
-  "여행_동반자",
-  "여행_인원_연령대",
-  "여행_스타일",
-  "여행의_목적",
-  "음식_취향",
-  "선호하는_여행_시간대",
-  "쇼핑_시간",
-  "관광지_밀집도",
-  "여행_템포",
+  "여행_구성원",
+  "예산_집중_포인트",
+  "숙박_스타일",
+  "장소_선호",
+  "음식_패턴",
+  "하루_리듬",
+  "추가_요청사항",
 ] as const;
 
 export type FunnelStepKey = (typeof FUNNEL_STEP_KEYS)[number];
 
-export const STEP_TITLES: Record<
+// 각 단계 헤더: heading(줄바꿈 \n 허용)에서 accent 부분만 파란색으로 강조,
+// hint는 헤더 아래 작은 안내 문구(옵션)
+export const STEP_META: Record<
   FunnelStepKey,
-  { title: string; highlight: string }
+  { heading: string; accent?: string; hint?: string }
 > = {
-  여행지_입력: { title: "떠나고싶은 ", highlight: "여행지" },
-  여행할_달: { title: "여행하고 싶은 ", highlight: "달" },
-  여행_기간: { title: "원하는 ", highlight: "여행 기간" },
-  여행_동반자: { title: "함께 떠날 ", highlight: "여행 동반자" },
-  여행_인원_연령대: { title: "여행 인원의 ", highlight: "연령대" },
-  예산_범위: { title: "이번 여행의 ", highlight: "예산" },
-  여행_스타일: { title: "의 ", highlight: "여행 스타일" },
-  여행의_목적: { title: "이번 여행의 ", highlight: "목적" },
-  음식_취향: { title: "선호하는 ", highlight: "음식 취향" },
-  선호하는_여행_시간대: { title: "선호하는 ", highlight: "여행 시간대" },
-  쇼핑_시간: { title: "원하는 ", highlight: "쇼핑 시간" },
-  관광지_밀집도: { title: "선호하는 ", highlight: "관광지 밀집도" },
-  여행_템포: { title: "원하는 ", highlight: "여행 템포" },
+  예산_범위: {
+    heading: "이번 여행의\n예산을\n설정해주세요",
+    accent: "예산",
+  },
+  여행지_입력: {
+    heading: "떠나고 싶은\n여행지를\n선택해주세요",
+    accent: "여행지",
+  },
+  여행할_달: {
+    heading: "여행하고 싶은\n달을\n선택해주세요",
+    accent: "달",
+    hint: "중복 선택이 가능해요",
+  },
+  여행_기간: {
+    heading: "원하는\n여행 기간을\n선택해주세요",
+    accent: "여행 기간",
+  },
+  여행_구성원: {
+    heading: "누구와 함께\n떠나시나요?",
+    accent: "누구와 함께",
+    hint: "예) 20대 친구와 둘이 · 아이 동반 3인 가족 · 60대 부모님과 효도 여행",
+  },
+  예산_집중_포인트: {
+    heading: "예산을 가장\n투자하고 싶은 곳은\n어디인가요?",
+    accent: "투자하고 싶은 곳",
+    hint: "최대 2개까지 선택할 수 있어요",
+  },
+  숙박_스타일: {
+    heading: "어떤 분위기의\n숙소를 선호하세요?",
+    accent: "숙소",
+  },
+  장소_선호: {
+    heading: "어떤 장소에 있을 때\n가장 행복하세요?",
+    accent: "장소",
+  },
+  음식_패턴: {
+    heading: "현지에서 식사는\n어떻게 하고 싶으세요?",
+    accent: "식사",
+  },
+  하루_리듬: {
+    heading: "여행 중 하루는\n어떻게 보내고 싶으세요?",
+    accent: "하루",
+  },
+  추가_요청사항: {
+    heading: "추가로 고려할 점이\n있다면 적어주세요",
+    accent: "고려할 점",
+  },
 };
 
 export const 여행지_목록: { region: string; destinations: string[] }[] = [
@@ -58,7 +92,8 @@ export const 여행지_목록: { region: string; destinations: string[] }[] = [
   },
 ];
 
-export const 사용자_취향_입력 = {
+// 기본 선택형 단계(라벨만 있는 단순 버튼). 여행할 달·여행 기간.
+export const 기본_선택_옵션: Record<string, string[]> = {
   여행할_달: ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12"],
   여행_기간: [
     "당일치기(1박2일 미만)",
@@ -68,67 +103,93 @@ export const 사용자_취향_입력 = {
     "4박5일",
     "5박 이상",
   ],
-  여행_인원_연령대: ["10대", "20대", "30대", "40대", "50대", "60대 이상"],
-  여행_스타일: [
-    "휴식/힐링",
-    "탐험/액티비티",
-    "문화/역사 체험",
-    "도시 관광",
-    "자연 경관 감상",
-  ],
-  여행_동반자: ["혼자", "친구와", "가족과", "연인과", "단체"],
-  // 숙소_선호: [
-  //   "고급 호텔",
-  //   "게스트하우스/호스텔",
-  //   "현지 가정집(에어비앤비 등)",
-  //   "자연 속 캠핑/글램핑",
-  // ],
-  음식_취향: [
-    "현지 음식",
-    "한국 음식",
-    "모험적인 새로운 음식",
-    "채식/비건 옵션",
-  ],
-  // 이동_수단_선호: ["도보", "대중교통", "자전거", "렌트카", "투어버스"],
-  // 액티비티_선호: [
-  //   "트레킹/하이킹",
-  //   "수상 스포츠 (서핑, 스노클링 등)",
-  //   "쇼핑",
-  //   "스파/마사지",
-  //   "박물관/미술관 방문",
-  // ],
-  여행의_목적: [
-    "휴양",
-    "사진 촬영",
-    "자기계발 (요가, 명상,워크숍 등)",
-    "맛집 탐방",
-    "로맨틱한 여행",
-  ],
-  선호하는_여행_시간대: ["아침", "점심", "저녁", "밤"],
-  활동_강도: [
-    "낮은 활동 (산책, 여유로운 관광)",
-    "중간 활동 (도시 투어, 짧은 하이킹)",
-    "높은 활동 (트레킹, 스포츠)",
-  ],
-  // 사진_촬영_선호도: ["많이 찍고 싶다", "적당히 찍고 싶다", "특별히 상관없다"],
-  쇼핑_시간: [
-    "적게 (기념품 정도)",
-    "중간 (시장/소규모 상점 탐방)",
-    "많이 (대형 쇼핑몰, 아울렛)",
-  ],
-  관광지_밀집도: [
-    "한두 곳 집중 방문",
-    "여러 곳 둘러보기",
-    "비인기 장소/숨은 명소 위주",
-  ],
-  // 특별한_관심사: [
-  //   "역사적인 장소 방문",
-  //   "건축물 감상",
-  //   "예술 및 문화 체험",
-  //   "자연 속 야생동물 관찰",
-  //   "음악 축제/공연",
-  // ],
-  여행_템포: ["여유로운 여행", "꽉 찬 일정", "균형 잡힌 일정"],
-  // 환경_선호: ["해변", "산악 지역", "사막", "도시 중심지", "전원/시골"],
-  // 특별히_하고싶은_엑티비티_활동_혹은_특별히_방문하고싶은_지역_축제: "",
 };
+
+// 취향/예산 분배 전략 단계 (6~10단계).
+// 각 단계는 라벨 + 한 줄 설명을 가진 카드 옵션으로 구성된다.
+export interface PreferenceOption {
+  label: string;
+  description: string;
+}
+
+export interface PreferenceStep {
+  multiSelect: boolean;
+  max?: number; // multiSelect일 때 최대 선택 개수
+  options: PreferenceOption[];
+}
+
+export const 취향_옵션: Record<string, PreferenceStep> = {
+  예산_집중_포인트: {
+    multiSelect: true,
+    max: 2,
+    options: [
+      { label: "잠자리(숙소)", description: "잠은 무조건 편하고 좋은 곳에서" },
+      { label: "미식(맛집)", description: "맛있는 음식을 위해서라면 줄 서도 좋아" },
+      {
+        label: "경험(액티비티)",
+        description: "여기서만 할 수 있는 체험과 입장료에 투자",
+      },
+      { label: "쇼핑", description: "브랜드 쇼핑이나 기념품 구매가 중요해" },
+      { label: "가성비", description: "최대한 아껴서 더 오래 여행하고 싶어" },
+    ],
+  },
+  숙박_스타일: {
+    multiSelect: false,
+    options: [
+      { label: "럭셔리", description: "5성급 호텔, 고급 리조트" },
+      { label: "감성", description: "에어비앤비, 유니크한 부티크 호텔" },
+      { label: "실속", description: "위치 좋고 깔끔한 비즈니스 호텔" },
+      { label: "로컬", description: "게스트하우스, 민박, 현지 느낌 물씬 나는 곳" },
+    ],
+  },
+  장소_선호: {
+    multiSelect: false,
+    options: [
+      {
+        label: "인스타그램 핫플",
+        description: "사진 예쁘게 나오는 힙한 카페와 전시장",
+      },
+      { label: "클래식 코스", description: "누구나 가는 랜드마크와 역사적 명소" },
+      {
+        label: "나만 아는 구석",
+        description: "관광객 없는 조용한 골목과 숨은 명소",
+      },
+      { label: "대자연", description: "도시를 벗어난 웅장한 자연경관" },
+    ],
+  },
+  음식_패턴: {
+    multiSelect: false,
+    options: [
+      { label: "미식가형", description: "파인다이닝이나 오마카세 예약 필수" },
+      {
+        label: "로컬 체험형",
+        description: "시장 음식, 길거리 음식, 현지 노포 맛집",
+      },
+      {
+        label: "안정 추구형",
+        description: "실패 없는 대형 프랜차이즈나 한식 포함",
+      },
+      { label: "간편형", description: "끼니는 대충 떼우고 관광에 더 집중" },
+    ],
+  },
+  하루_리듬: {
+    multiSelect: false,
+    options: [
+      {
+        label: "얼리버드",
+        description: "조식 먹고 아침 일찍 시작하는 부지런한 일정",
+      },
+      {
+        label: "올빼미",
+        description: "늦잠 자고 일어나 밤 문화를 즐기는 야행성 일정",
+      },
+      { label: "여유형", description: "중간에 카페에서 멍 때리는 시간이 필요한 일정" },
+    ],
+  },
+};
+
+// 취향 옵션이 있는(=카드 선택형) 단계 키 목록
+export const 취향_단계_키 = Object.keys(취향_옵션);
+
+// 구글 소셜 로그인 URL (index·login 공용 — 중복 정의 방지)
+export const GOOGLE_SOCIAL_LOGIN_URL = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID}&redirect_uri=${process.env.NEXT_PUBLIC_REDIRECT_URI}&response_type=code&scope=email profile`;
