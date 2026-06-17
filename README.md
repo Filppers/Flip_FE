@@ -1,103 +1,66 @@
 # Flip FE
 
-Next.js 14 frontend for **Flip**, an AI-powered travel planning service. Users sign in with Google OAuth, complete a preference funnel, and receive generated trip plans via OpenAI.
+## 사전 준비
 
-## Prerequisites
+- [Node.js](https://nodejs.org/) 20 이상
+- npm (또는 yarn / pnpm / bun)
 
-- [Node.js](https://nodejs.org/) 20+ (project uses `@types/node` ^20)
-- npm (or yarn / pnpm / bun)
-
-## Setup
-
-1. Install dependencies:
+## 설치 및 실행
 
 ```bash
 npm install
-```
-
-2. Copy the environment sample and fill in your values:
-
-```bash
 cp .env.sample .env
 ```
 
-3. Configure the variables described in [Environment variables](#environment-variables) below.
+`.env` 파일에 아래 [환경 변수](#환경-변수)를 채워주세요.
 
-## Environment variables
+## 환경 변수
 
-Create a `.env` file in the project root (`.env` is gitignored). See `.env.sample` for placeholders.
+`.env`는 프로젝트 루트에 생성하며 gitignore 처리됩니다.
 
-| Variable | Required | Scope | Description |
-| --- | --- | --- | --- |
-| `NEXT_PUBLIC_GOOGLE_CLIENT_ID` | Yes (Google login) | Client + server | Google OAuth 2.0 client ID. Used in the login URL (`src/constants.ts`) and token exchange (`src/pages/api/oauth/callback.ts`). |
-| `NEXT_PUBLIC_REDIRECT_URI` | No | Client + server | OAuth redirect URI. Defaults to `http://localhost:3000/oauth/callback/google` when unset. Must match the URI registered in Google Cloud Console. |
-| `GOOGLE_CLIENT_SECRET` | Yes (Google login) | Server only | Google OAuth client secret for exchanging auth codes in `/api/oauth/callback`. |
-| `OPENAI_API_KEY` | Yes (trip planning) | Server only | OpenAI API key used by `/api/chat` to generate travel plans (model: `gpt-4o`). |
-| `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` | No | Client | Google Maps JavaScript API key for `TripRouteMap`. Optional; defaults to an empty string if unset. |
-
-### Backend API (hardcoded)
-
-`src/api/config.tsx` defines an axios instance with `baseURL: "http://localhost:8080"`, but it is not imported elsewhere in the codebase yet. No environment variable controls this URL today.
-
-## Scripts
-
-Defined in `package.json`:
-
-| Script | Command | Description |
+| 변수 | 필수 여부 | 설명 |
 | --- | --- | --- |
-| `dev` | `next dev` | Start the development server with hot reload (default port 3000). |
-| `build` | `next build` | Create an optimized production build. |
-| `start` | `next start` | Serve the production build (run `build` first). |
-| `lint` | `next lint` | Run ESLint via Next.js. |
+| `NEXT_PUBLIC_GOOGLE_CLIENT_ID` | 필수 (Google 로그인) | Google OAuth 클라이언트 ID |
+| `GOOGLE_CLIENT_SECRET` | 필수 (Google 로그인) | Google OAuth 클라이언트 시크릿 (서버 전용) |
+| `OPENAI_API_KEY` | 필수 (여행 계획 생성) | `/api/chat`에서 사용하는 OpenAI API 키 (모델: `gpt-4o`) |
+| `NEXT_PUBLIC_REDIRECT_URI` | 선택 | OAuth 리다이렉트 URI. 미설정 시 `http://localhost:3000/oauth/callback/google` |
+| `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` | 선택 | 지도 표시용 Google Maps API 키 |
 
-There are no `test` scripts, Docker files, or shell run scripts in this repository.
+> 참고: `src/api/config.tsx`에 백엔드 URL(`http://localhost:8080`)이 하드코딩되어 있으나 아직 사용되지 않습니다.
 
-### Development
+## 스크립트
 
-```bash
-npm run dev
-```
+| 명령 | 설명 |
+| --- | --- |
+| `npm run dev` | 개발 서버 실행 (기본 포트 3000) |
+| `npm run build` | 프로덕션 빌드 생성 |
+| `npm run start` | 빌드 결과 실행 |
+| `npm run lint` | ESLint 실행 |
 
-Open [http://localhost:3000](http://localhost:3000) in your browser.
+주요 라우트:
+- `/` — Google 로그인 랜딩 페이지
+- `/oauth/callback/[provider]` — OAuth 콜백
+- `/trip/plan` — 여행 선호도 설정 및 AI 여행 계획
 
-Main routes:
+## API 라우트
 
-- `/` — landing page with Google login
-- `/login` — login page
-- `/oauth/callback/[provider]` — OAuth callback (e.g. `/oauth/callback/google`)
-- `/trip/plan` — travel preference funnel and AI-generated plan
+| 라우트 | 메서드 | 설명 |
+| --- | --- | --- |
+| `/api/oauth/callback` | GET | Google 인증 코드를 사용자 프로필로 교환 |
+| `/api/chat` | POST | 사용자 입력 기반 여행 계획 생성 |
 
-### Production build
+## 기술 스택
 
-```bash
-npm run build
-npm run start
-```
+Next.js 14.2 (Pages Router), React 18, Tailwind CSS, TanStack React Query, axios, Google OAuth, OpenAI, Google Maps
 
-## API routes
-
-Next.js API routes under `src/pages/api/`:
-
-| Route | Method | Env vars | Purpose |
-| --- | --- | --- | --- |
-| `/api/oauth/callback` | GET | `NEXT_PUBLIC_GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `NEXT_PUBLIC_REDIRECT_URI` | Exchange Google auth code for user profile (name, email, picture). |
-| `/api/chat` | POST | `OPENAI_API_KEY` | Generate travel plan JSON from user prompts (`step`: `summary`, `details`, or default). |
-
-## Tech stack
-
-- **Framework:** Next.js 14.2 (Pages Router, `src/pages/`)
-- **UI:** React 18, Tailwind CSS
-- **Data:** TanStack React Query, axios
-- **Integrations:** Google OAuth, OpenAI, Google Maps (`@react-google-maps/api`)
-
-## Project structure
+## 프로젝트 구조
 
 ```
 src/
-├── pages/          # Routes and API handlers
-├── components/     # UI components
-├── constant/       # OpenAI prompt templates
-├── api/            # Axios config (backend base URL)
-├── constants.ts    # Funnel options, Google login URL
-└── styles/         # Global CSS
+├── pages/          # 라우트 및 API 핸들러
+├── components/     # UI 컴포넌트
+├── constant/       # OpenAI 프롬프트 템플릿
+├── api/            # Axios 설정 (백엔드 base URL)
+├── constants.ts    # 선호도 옵션, Google 로그인 URL
+└── styles/         # 전역 CSS
 ```
